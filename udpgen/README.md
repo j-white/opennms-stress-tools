@@ -4,25 +4,31 @@
 
 Yet another tool used to generate and send traps and syslogs messages.
 
-## Syslogs
+## Requirements
 
-Syslog message:
+* cmake
+* netsnmp-devel
 
+## Building
+
+```sh
+mkdir build
+cd build
+cmake ..
+make
 ```
-<190>Mar 11 08:35:17 fw01 30228451: Mar 11 08:35:16.844 CST: %SEC-6-IPACCESSLOGP: list in110 denied tcp 10.99.99.1(63923) -> 10.98.98.1(1521), 1 packet
+
+## Running
+
+```sh
+./udpgen -r 1000
 ```
 
-On OpenNMS:
+## OpenNMS and Minion
+
+When pointing to a Minion, make sure that the following handler features are installed on OpenNMS (these are not currently installed by default)
 
 ```
 ssh -p 8101 admin@localhost
-opennms> features:install opennms-syslogd-handler-default
+opennms> features:install opennms-syslogd-handler-default opennms-trapd-handler-default
 ```
-
-## Traps
-
-```
-ssh -p 8101 admin@localhost
-opennms> features:install opennms-trapd-handler-default
-```
-

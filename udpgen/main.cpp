@@ -24,7 +24,7 @@ int resolvehelper(const char *hostname, int family, const char *service, sockadd
     return result;
 }
 
-void sendSyslogMessages() {
+void sendSyslogMessages(int rate) {
     ssize_t result = 0;
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
 
@@ -51,7 +51,7 @@ void sendSyslogMessages() {
     size_t msg_length = strlen(msg);
 
     RateLimiterInterface* limiter = new RateLimiter();
-    limiter->set_rate(40000);
+    limiter->set_rate(rate);
     while(true) {
         result = sendto(sock, msg, msg_length, 0, (sockaddr *) &addrDest, sizeof(addrDest));
         limiter->aquire();
@@ -64,7 +64,7 @@ oid              trap_oid[] =       { 1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0 };
 oid             objid_id[] = { 1, 3, 6, 1, 6, 3, 1, 1, 5, 1 };
 
 
-void sendSnmpTraps() {
+void sendSnmpTraps(int rate) {
     netsnmp_session session, *ss;
     netsnmp_pdu    *pdu, *response;
     char *trap = NULL;
@@ -96,7 +96,7 @@ void sendSnmpTraps() {
     snmp_add_var(pdu, objid_id, OID_LENGTH(objid_id) , 's', "ABC");
 
     RateLimiterInterface* limiter = new RateLimiter();
-    limiter->set_rate(40000);
+    limiter->set_rate(rate);
     while(true) {
         send_trap_to_sess(ss, pdu);
         limiter->aquire();
@@ -108,12 +108,16 @@ void sendSnmpTraps() {
 
 int main(int argc, char **argv) {
     int rate = 40000;
+    char traps = 0;
     int c;
-    while ((c = getopt (argc, argv, "r:")) != -1) {
+    while ((c = getopt (argc, argv, "r:t")) != -1) {
         switch (c)
         {
             case 'r':
                 rate = atoi(optarg);
+                break;
+            case 't':
+                traps = 1;
                 break;
             default:
                 printf("Invalid option.");
@@ -121,8 +125,14 @@ int main(int argc, char **argv) {
         }
     }
 
-    // sendSyslogMessages();
-    sendSnmpTraps();
+    if (traps) {
+        printf("Sending SNMPv2 traps at target rate of %d traps per second\n", rate);
+        sendSnmpTraps(rate);
+    } else {
+        printf("Sending syslog messages at target rate of %d message per seconds\n", rate);
+        sendSyslogMessages(rate);
+    }
+
 
     return 0;
 }
