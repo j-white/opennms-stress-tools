@@ -152,7 +152,7 @@ void daemonize() {
 int main(int argc, char **argv) {
     const char* DEFAULT_HOST = "127.0.0.1";
     const int DEFAULT_TRAP_PORT = 1262;
-    const int DEFAULT_SYSLOG_PORT = 1161;
+    const int DEFAULT_SYSLOG_PORT = 1514;
     const int DEFAULT_RATE = 10000;
 
     char host[512];
