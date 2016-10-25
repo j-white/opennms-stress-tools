@@ -111,6 +111,44 @@ void sendSnmpTraps(const char* host, const int port, const int rate) {
     snmp_close(ss);
 }
 
+
+void daemonize() {
+    FILE *fp= NULL;
+    pid_t process_id = 0;
+    pid_t sid = 0;
+    // Create child process
+    process_id = fork();
+    // Indication of fork() failure
+    if (process_id < 0)
+    {
+        printf("fork failed!\n");
+        // Return failure in exit status
+        exit(1);
+    }
+    // PARENT PROCESS. Need to kill it.
+    if (process_id > 0)
+    {
+        printf("process_id of child process %d \n", process_id);
+        // return success in exit status
+        exit(0);
+    }
+    //unmask the file mode
+    //umask(0);
+    //set new session
+    sid = setsid();
+    if(sid < 0)
+    {
+        // Return failure
+        exit(1);
+    }
+    // Change the current working directory to tmp.
+    chdir("/tmp");
+    // Close stdin. stdout and stderr
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+}
+
 int main(int argc, char **argv) {
     const char* DEFAULT_HOST = "127.0.0.1";
     const int DEFAULT_TRAP_PORT = 1262;
@@ -121,12 +159,16 @@ int main(int argc, char **argv) {
     int port = 0;
     int rate = DEFAULT_RATE;
     char traps = 0;
+    char daemon = 0;
 
     strcpy(host, DEFAULT_HOST);
     int c;
-    while ((c = getopt (argc, argv, "h:p:r:t")) != -1) {
+    while ((c = getopt (argc, argv, "dh:p:r:t")) != -1) {
         switch (c)
         {
+            case 'd':
+                daemon = 1;
+                break;
             case 'h':
                 strncpy(host, optarg, sizeof(host));
                 break;
@@ -140,9 +182,13 @@ int main(int argc, char **argv) {
                 traps = 1;
                 break;
             default:
-                printf("\nUsage: udpgen [-h host] [-p port] [-r rate] [-t]\n\n");
+                printf("\nUsage: udpgen [-d] [-h host] [-p port] [-r rate] [-t]\n\n");
                 exit(1);
         }
+    }
+
+    if (daemon) {
+        daemonize();
     }
 
     if (traps) {
