@@ -24,7 +24,7 @@ int resolvehelper(const char *hostname, int family, const char *service, sockadd
     return result;
 }
 
-void sendSyslogMessages(int rate) {
+void sendSyslogMessages(const char* host, const int port, const int rate) {
     ssize_t result = 0;
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
 
@@ -39,8 +39,11 @@ void sendSyslogMessages(int rate) {
         std::exit(1);
     }
 
+    char service[128];
+    snprintf(service, 128, "%d", port);
+
     sockaddr_storage addrDest = {};
-    result = resolvehelper("127.0.0.1", AF_INET, "1514", &addrDest);
+    result = resolvehelper(host, AF_INET, service, &addrDest);
     if (result != 0) {
         int lasterror = errno;
         std::cout << "error: " << lasterror;
@@ -64,17 +67,19 @@ oid              trap_oid[] =       { 1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0 };
 oid             objid_id[] = { 1, 3, 6, 1, 6, 3, 1, 1, 5, 1 };
 
 
-void sendSnmpTraps(int rate) {
+void sendSnmpTraps(const char* host, const int port, const int rate) {
     netsnmp_session session, *ss;
     netsnmp_pdu    *pdu, *response;
     char *trap = NULL;
 
+    char peername[512];
+    snprintf(peername, 512, "%s:%d", host, port);
     char comm[] = "public";
     snmp_sess_init( &session );
     session.version = SNMP_VERSION_2c;
     session.community = (u_char*)comm;
     session.community_len = strlen((const char*)session.community);
-    session.peername = (char*)("127.0.0.1:1262");
+    session.peername = (char*)(peername);
     ss = snmp_open(&session);
     if (!ss) {
         snmp_sess_perror("ack", &session);
@@ -107,12 +112,27 @@ void sendSnmpTraps(int rate) {
 }
 
 int main(int argc, char **argv) {
-    int rate = 40000;
+    const char* DEFAULT_HOST = "127.0.0.1";
+    const int DEFAULT_TRAP_PORT = 1262;
+    const int DEFAULT_SYSLOG_PORT = 1161;
+    const int DEFAULT_RATE = 10000;
+
+    char host[512];
+    int port = 0;
+    int rate = DEFAULT_RATE;
     char traps = 0;
+
+    strcpy(host, DEFAULT_HOST);
     int c;
-    while ((c = getopt (argc, argv, "r:t")) != -1) {
+    while ((c = getopt (argc, argv, "h:p:r:t")) != -1) {
         switch (c)
         {
+            case 'h':
+                strncpy(host, optarg, sizeof(host));
+                break;
+            case 'p':
+                port = atoi(optarg);
+                break;
             case 'r':
                 rate = atoi(optarg);
                 break;
@@ -120,19 +140,24 @@ int main(int argc, char **argv) {
                 traps = 1;
                 break;
             default:
-                printf("Invalid option.");
+                printf("\nUsage: udpgen [-h host] [-p port] [-r rate] [-t]\n\n");
                 exit(1);
         }
     }
 
     if (traps) {
-        printf("Sending SNMPv2 traps at target rate of %d traps per second\n", rate);
-        sendSnmpTraps(rate);
+        if (port < 1) {
+            port = DEFAULT_TRAP_PORT;
+        }
+        printf("Sending SNMPv2 traps to %s:%d at target rate of %d traps per second\n", host, port, rate);
+        sendSnmpTraps(host, port, rate);
     } else {
-        printf("Sending syslog messages at target rate of %d message per seconds\n", rate);
-        sendSyslogMessages(rate);
+        if (port < 1) {
+            port = DEFAULT_SYSLOG_PORT;
+        }
+        printf("Sending syslog messages to %s:%d at target rate of %d message per seconds\n", host, port, rate);
+        sendSyslogMessages(host, port, rate);
     }
-
 
     return 0;
 }
