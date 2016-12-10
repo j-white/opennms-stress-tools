@@ -4,6 +4,8 @@
 #include <string.h>
 #include <netdb.h>
 #include <memory.h>
+#include <thread>
+#include <atomic>
 
 #include <net-snmp/net-snmp-config.h>
 #include <net-snmp/net-snmp-includes.h>
@@ -24,7 +26,10 @@ int resolvehelper(const char *hostname, int family, const char *service, sockadd
     return result;
 }
 
-void sendSyslogMessages(const char* host, const int port, const int rate) {
+
+std::atomic_ullong counter(0);
+
+void sendSyslogMessages(const char* host, const int port, const int rate, RateLimiterInterface* limiter) {
     ssize_t result = 0;
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
 
@@ -50,22 +55,31 @@ void sendSyslogMessages(const char* host, const int port, const int rate) {
         std::exit(1);
     }
 
-    const char *msg = "<190>Mar 11 08:35:17 fw01 30228451: Mar 11 08:35:16.844 CST: %SEC-6-IPACCESSLOGP: list in110 denied tcp 10.99.99.1(63923) -> 10.98.98.1(1521), 1 packet";
-    size_t msg_length = strlen(msg);
+    const int N = 512;
+    char msg[N];
+    const int printEvery = 10 * rate;
 
-    RateLimiterInterface* limiter = new RateLimiter();
-    limiter->set_rate(rate);
+    char buff[100];
+    time_t now;
+    unsigned long long val;
+
+
     while(true) {
-        result = sendto(sock, msg, msg_length, 0, (sockaddr *) &addrDest, sizeof(addrDest));
         limiter->aquire();
+        val = counter.fetch_add(1);
+        snprintf(msg, N, "<190>Mar 11 08:35:17 fw01 %llu: Mar 11 08:35:16.844 CST: %%SEC-6-IPACCESSLOGP: list in110 denied tcp 10.99.99.1(63923) -> 10.98.98.1(1521), 1 packet", val);
+        result = sendto(sock, msg, strlen(msg), 0, (sockaddr *) &addrDest, sizeof(addrDest));
+        if (val % printEvery == 0) {
+            now = time(0);
+            strftime (buff, 100, "%Y-%m-%d %H:%M:%S.000", localtime (&now));
+            printf ("%s: Sent %llu Syslog messages\n", buff, val);
+        }
     }
-    free(limiter);
 }
 
 oid             objid_sysuptime[] = { 1, 3, 6, 1, 2, 1, 1, 3, 0 };
 oid              trap_oid[] =       { 1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0 };
 oid             objid_id[] = { 1, 3, 6, 1, 6, 3, 1, 1, 5, 1 };
-
 
 void sendSnmpTraps(const char* host, const int port, const int rate) {
     netsnmp_session session, *ss;
@@ -160,10 +174,11 @@ int main(int argc, char **argv) {
     int rate = DEFAULT_RATE;
     char traps = 0;
     char daemon = 0;
+    int num_threads = 1;
 
     strcpy(host, DEFAULT_HOST);
     int c;
-    while ((c = getopt (argc, argv, "dh:p:r:t")) != -1) {
+    while ((c = getopt (argc, argv, "dh:p:r:tx:")) != -1) {
         switch (c)
         {
             case 'd':
@@ -178,11 +193,14 @@ int main(int argc, char **argv) {
             case 'r':
                 rate = atoi(optarg);
                 break;
+            case 'x':
+                num_threads = atoi(optarg);
+                break;
             case 't':
                 traps = 1;
                 break;
             default:
-                printf("\nUsage: udpgen [-d] [-h host] [-p port] [-r rate] [-t]\n\n");
+                printf("\nUsage: udpgen [-d] [-h host] [-p port] [-r rate] [-x threads] [-t]\n\n");
                 exit(1);
         }
     }
@@ -201,8 +219,21 @@ int main(int argc, char **argv) {
         if (port < 1) {
             port = DEFAULT_SYSLOG_PORT;
         }
-        printf("Sending syslog messages to %s:%d at target rate of %d message per seconds\n", host, port, rate);
-        sendSyslogMessages(host, port, rate);
+        printf("Sending syslog messages to %s:%d at target rate of %d message per seconds across %d threads \n", host, port, rate, num_threads);
+
+        RateLimiterInterface* limiter = new RateLimiter();
+        limiter->set_rate(rate);
+
+        std::thread t[num_threads];
+        for (int i = 0; i < num_threads; ++i) {
+            t[i] = std::thread(sendSyslogMessages, host, port, rate, limiter);
+        }
+
+        for (int i = 0; i < num_threads; ++i) {
+            t[i].join();
+        }
+
+        free(limiter);
     }
 
     return 0;
