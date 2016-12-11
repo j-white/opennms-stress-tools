@@ -2,14 +2,18 @@
 
 ## Overview
 
-Yet another tool used to generate and send traps and syslogs messages.
+Yet another tool used to generate SNMPv2 traps and Syslog messages.
 
-## Requirements
+This tool was written to help stress test OpenNMS' Syslog and SNMP trap listeners, by generating large volumes of traffic.
+
+## Building
+
+### Requirements
 
 * cmake
 * netsnmp-devel
 
-## Building
+### Compiling
 
 ```sh
 mkdir build
@@ -18,17 +22,20 @@ cmake ..
 make
 ```
 
-## Running
+## Usage
+
+### Generate Syslog Message
+
+Generate 100000 syslog messages per second over 10 threads, targeted at 172.23.1.1:514.
 
 ```sh
-./udpgen -r 1000
+./udpgen -r 100000 -t 10 -h 172.23.1.1 -p 514
 ```
 
-## OpenNMS and Minion
+### Generate SNMP Traps
 
-When pointing to a Minion, make sure that the following handler features are installed on OpenNMS (these are not currently installed by default)
+Generate 200000 SNMPv2 traps per second over 8 threads, targeted at 127.0.0.1:1162.
 
-```
-ssh -p 8101 admin@localhost
-opennms> features:install opennms-syslogd-handler-default opennms-trapd-handler-default
+```sh
+./udpgen -x -r 200000 -t 8
 ```
