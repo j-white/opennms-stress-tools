@@ -49,6 +49,7 @@ int main(int argc, char **argv) {
                 printf("  -h: Target host / IP address (default: 127.0.0.1)\n");
                 printf("  -p: Target port (default: depends on mode)\n");
                 printf("  -r: Rate - number of packets per second to generate (default: 10000)\n");
+                printf("             set the rate to 0 in order to disable rate limiting\n");
                 printf("  -t: Number of threads used to generate packets (default: 1)\n\n");
                 return 1;
         }
@@ -71,7 +72,7 @@ int main(int argc, char **argv) {
     if (port > 0) {
         generator->setPort(port);
     }
-    if (rate > 0) {
+    if (rate >= 0) {
         generator->setPacketsPerSecond(rate);
     }
     if (num_threads > 0) {
@@ -82,10 +83,12 @@ int main(int argc, char **argv) {
            generator->getPacketDescription(), generator->getHost(), generator->getPort(), generator->getPacketsPerSecond(),
            generator->getNumThreads());
 
-    printf("\nThe number of packets sent should be printed every %d seconds.\n"
-           "If the more than %d seconds elapses between the reports, the program is unable to generate packets at the requested rate.\n"
-           "You can try consider increasing the number of threads.\n\n",
-            generator->getReportInterval(), generator->getReportInterval());
+    if (generator->getPacketsPerSecond() > 0) {
+        printf("\nThe number of packets sent should be printed every %d seconds.\n"
+                       "If the more than %d seconds elapses between the reports, the program is unable to generate packets at the requested rate.\n"
+                       "You can try consider increasing the number of threads.\n\n",
+               generator->getReportInterval(), generator->getReportInterval());
+    }
 
     generator->start();
     char waitForKey;

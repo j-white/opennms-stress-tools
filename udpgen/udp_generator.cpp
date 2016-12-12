@@ -3,6 +3,7 @@
 #include <iostream>
 #include <netdb.h>
 #include <cstring>
+#include <algorithm>
 #include "rate_limiter.hpp"
 
 UDPGenerator::UDPGenerator() {
@@ -53,6 +54,14 @@ int UDPGenerator::getReportInterval() {
     return m_report_interval;
 }
 
+void UDPGenerator::setNumPacketsPerSend(unsigned int num_packets_per_send) {
+    m_num_packets_per_send = num_packets_per_send;
+}
+
+unsigned int UDPGenerator::getNumPacketsPerSend() {
+    return m_num_packets_per_send;
+}
+
 int UDPGenerator::resolvehelper(const char *hostname, int family, const char *service, sockaddr_storage *pAddr) {
     int result;
     addrinfo *result_list = NULL;
@@ -68,29 +77,52 @@ int UDPGenerator::resolvehelper(const char *hostname, int family, const char *se
 }
 
 int UDPGenerator::start() {
-    m_limiter = std::unique_ptr<RateLimiter>(new RateLimiter());
-    m_limiter.get()->set_rate(m_packets_per_second);
+    if (m_packets_per_second > 0) {
+        m_limiter = std::unique_ptr<RateLimiter>(new RateLimiter());
+        m_limiter.get()->set_rate(m_packets_per_second);
+    }
 
     m_sequence_counter.store(0);
     m_stopped = false;
-    m_report_every_n_packets = (unsigned long)(m_limiter->get_rate()) * m_report_interval;
 
     m_threads = std::unique_ptr<std::thread[]>(new std::thread[m_num_threads]);
     for (int i = 0; i < m_num_threads; ++i) {
-        m_threads[i] = std::thread(&UDPGenerator::run, this, i);
+        if (m_packets_per_second > 0) {
+            m_report_every_n_packets = (unsigned long)(m_packets_per_second) * m_report_interval;
+            m_threads[i] = std::thread(&UDPGenerator::runWithRateLimit, this, i);
+        } else {
+            m_report_every_n_packets = (unsigned long)1000000 * m_report_interval;
+            m_threads[i] = std::thread(&UDPGenerator::runWithoutRateLimit, this, i);
+        }
     }
     return 0;
 }
 
-void UDPGenerator::run(int threadid) {
+void UDPGenerator::runWithRateLimit(int threadid) {
     time_t now;
     const int DATE_BUFF_SIZE = 100;
     char date_buff[DATE_BUFF_SIZE];
 
     while(!m_stopped) {
-        m_limiter.get()->aquire();
-        unsigned long long seq = m_sequence_counter.fetch_add(1);
-        sendPacket(threadid, seq);
+        m_limiter.get()->aquire(m_num_packets_per_send);
+        unsigned long long seq = m_sequence_counter.fetch_add(m_num_packets_per_send);
+        sendPackets(threadid, seq);
+        if (seq % m_report_every_n_packets == 0) {
+            now = time(0);
+            strftime(date_buff, DATE_BUFF_SIZE, "%Y-%m-%d %H:%M:%S.000", localtime(&now));
+            printf ("%s: Sent %llu packets.\n", date_buff, seq);
+        }
+    }
+}
+
+void UDPGenerator::runWithoutRateLimit(int threadid) {
+    time_t now;
+    const int DATE_BUFF_SIZE = 100;
+    char date_buff[DATE_BUFF_SIZE];
+
+    while(!m_stopped) {
+        unsigned long long seq = m_sequence_counter.fetch_add(m_num_packets_per_send);
+        sendPackets(threadid, seq);
         if (seq % m_report_every_n_packets == 0) {
             now = time(0);
             strftime(date_buff, DATE_BUFF_SIZE, "%Y-%m-%d %H:%M:%S.000", localtime(&now));

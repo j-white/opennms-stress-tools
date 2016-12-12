@@ -26,10 +26,15 @@ make
 
 ### Generate Syslog Message
 
-Generate 100000 syslog messages per second over 10 threads, targeted at 172.23.1.1:514.
+Generate 100000 Syslog messages per second over 10 threads, targeted at 172.23.1.1:514.
 
 ```sh
 ./udpgen -r 100000 -t 10 -h 172.23.1.1 -p 514
+```
+
+Pin `udpgen` to the first core, and generate as many Syslog messages as possible using a single thread.
+```sh
+taskset -c 0 ./udpgen -r 0
 ```
 
 ### Generate SNMP Traps

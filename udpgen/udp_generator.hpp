@@ -27,13 +27,17 @@ public:
     void setReportInterval(int report_interval);
     int getReportInterval();
 
+    void setNumPacketsPerSend(unsigned int num_packets);
+    unsigned int getNumPacketsPerSend();
+
     virtual int start();
     virtual void stop();
 
-    void run(int threadid);
+    void runWithRateLimit(int threadid);
+    void runWithoutRateLimit(int threadid);
 
     virtual const char* getPacketDescription() = 0;
-    virtual void sendPacket(int threadid, unsigned long long seq) = 0;
+    virtual void sendPackets(int threadid, unsigned long long seq) = 0;
 
     int resolvehelper(const char *hostname, int family, const char *service, sockaddr_storage *pAddr);
 
@@ -43,7 +47,7 @@ private:
     int m_num_threads = 1;
     double m_packets_per_second = 10000;
     int m_report_interval = 10;
-
+    unsigned int m_num_packets_per_send = 1;
 
     unsigned long long m_report_every_n_packets;
     bool m_stopped;

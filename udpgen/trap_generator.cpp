@@ -87,7 +87,7 @@ const char* TrapGenerator::getPacketDescription() {
     return "SNMP Traps";
 }
 
-void TrapGenerator::sendPacket(int threadid, unsigned long long seq) {
+void TrapGenerator::sendPackets(int threadid, unsigned long long seq) {
     netsnmp_session *ss = m_sessions[threadid];
     send_trap_to_sess(ss, m_template_pdu);
 }

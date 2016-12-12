@@ -9,14 +9,17 @@ public:
     virtual int start();
     virtual void stop();
     virtual const char* getPacketDescription();
-    virtual void sendPacket(int threadid, unsigned long long seq);
+    virtual void sendPackets(int threadid, unsigned long long seq);
 private:
     sockaddr_storage m_dest;
+    unsigned int m_num_packets_per_send = 1;
 
-    static const int BUFFER_SIZE = 512;
+    static const int SEQ_BUFFER_SIZE = 64;
 
-    std::unique_ptr<char*[]> m_buffers;
-    std::unique_ptr<int[]> m_sockets;
+    int* m_sockets = NULL;
+    struct msghdr* m_message_headers = NULL;
+    struct iovec** m_message_iovs = NULL;
+    char** m_seq_buffers = NULL;
 };
 
 #endif
