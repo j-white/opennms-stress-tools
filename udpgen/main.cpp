@@ -19,11 +19,11 @@ int main(int argc, char **argv) {
     char traps = 0;
     char daemon = 0;
     int num_threads = -1;
+    unsigned int num_packets_per_send = 0;
 
     int c;
-    while ((c = getopt (argc, argv, "dh:p:r:t:x")) != -1) {
-        switch (c)
-        {
+    while ((c = getopt (argc, argv, "dh:p:r:t:xz:")) != -1) {
+        switch (c) {
             case 'd':
                 daemon = 1;
                 break;
@@ -42,15 +42,20 @@ int main(int argc, char **argv) {
             case 'x':
                 traps = 1;
                 break;
+            case 'z':
+                num_packets_per_send = atoi(optarg);
+                break;
             default:
-                printf("\nUsage: udpgen [-x] [-d] [-h host] [-p port] [-r rate] [-t threads]\n\n");
+                printf("\nUsage: udpgen [-x] [-d] [-h host] [-p port] [-r rate] [-t threads] [-z packets]\n\n");
                 printf("  -x: Generate SNMP Traps instead of Syslog Messages\n");
                 printf("  -d: Daemonize (default: false)\n");
                 printf("  -h: Target host / IP address (default: 127.0.0.1)\n");
                 printf("  -p: Target port (default: depends on mode)\n");
                 printf("  -r: Rate - number of packets per second to generate (default: 10000)\n");
                 printf("             set the rate to 0 in order to disable rate limiting\n");
-                printf("  -t: Number of threads used to generate packets (default: 1)\n\n");
+                printf("  -t: Number of threads used to generate packets (default: 1)\n");
+                printf("  -z: Number of packets per iteration (default: 1)\n");
+                printf("             increase this when sending packets at a high rate\n\n");
                 return 1;
         }
     }
@@ -78,6 +83,14 @@ int main(int argc, char **argv) {
     if (num_threads > 0) {
         generator->setNumThreads(num_threads);
     }
+    if (num_packets_per_send > 0) {
+        generator->setNumPacketsPerSend(num_packets_per_send);
+    }
+
+    if (generator->getPacketsPerSecond() > 10000 && generator->getNumPacketsPerSend() < 10) {
+        printf("\nWARNING: Packet rate limiting breaks down at high rates. "
+                       "Consider increasing the number of packets per send.\n\n");
+    }
 
     printf("Sending %s to %s:%d at target rate of %.2f packets per seconds across %d thread(s).\n",
            generator->getPacketDescription(), generator->getHost(), generator->getPort(), generator->getPacketsPerSecond(),
@@ -85,7 +98,8 @@ int main(int argc, char **argv) {
 
     if (generator->getPacketsPerSecond() > 0) {
         printf("\nThe number of packets sent should be printed every %d seconds.\n"
-                       "If the more than %d seconds elapses between the reports, the program is unable to generate packets at the requested rate.\n"
+                       "If the more than %d seconds elapses between the reports, "
+                       "the program is unable to generate packets at the requested rate.\n"
                        "You can try consider increasing the number of threads.\n\n",
                generator->getReportInterval(), generator->getReportInterval());
     }

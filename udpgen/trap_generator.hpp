@@ -13,7 +13,7 @@ public:
     virtual int start();
     virtual void stop();
     virtual const char* getPacketDescription();
-    virtual void sendPackets(int threadid, unsigned long long seq);
+    virtual void sendPackets(int threadid, unsigned int num_packets, unsigned long long first_seq);
 private:
     const char* m_community = "public";
 

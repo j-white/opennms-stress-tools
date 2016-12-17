@@ -9,10 +9,9 @@ public:
     virtual int start();
     virtual void stop();
     virtual const char* getPacketDescription();
-    virtual void sendPackets(int threadid, unsigned long long seq);
+    virtual void sendPackets(int threadid, unsigned int num_packets, unsigned long long first_seq);
 private:
     sockaddr_storage m_dest;
-    unsigned int m_num_packets_per_send = 1;
 
     static const int SEQ_BUFFER_SIZE = 64;
 

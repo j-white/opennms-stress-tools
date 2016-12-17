@@ -7,7 +7,6 @@
 
 SyslogGenerator::SyslogGenerator() {
     setPort(1514);
-    setNumPacketsPerSend(m_num_packets_per_send);
 }
 
 int SyslogGenerator::start() {
@@ -94,17 +93,19 @@ const char* SyslogGenerator::getPacketDescription() {
     return "Syslog Messages";
 }
 
-void SyslogGenerator::sendPackets(int threadid, unsigned long long seq) {
+void SyslogGenerator::sendPackets(int threadid, unsigned int num_packets, unsigned long long first_seq) {
     struct msghdr *message_header = &m_message_headers[threadid];
     struct iovec *seq_iovec = &m_message_iovs[threadid][1];
     char *seq_buffer = m_seq_buffers[threadid];
 
-    // Update the sequence buffer with the current sequence id
-    seq_iovec->iov_len = (size_t) snprintf(seq_buffer, SEQ_BUFFER_SIZE, "%llu", seq);
+    for (unsigned int i = 0; i < num_packets; i++) {
+        // Update the sequence buffer with the current sequence id
+        seq_iovec->iov_len = (size_t) snprintf(seq_buffer, SEQ_BUFFER_SIZE, "%llu", first_seq + i);
 
-    sendmsg(m_sockets[threadid], message_header, 0);
-    /* This throws an error, but the packets are successfully sent ?!
-    if (ret < 0) {
-        perror("sendmsg()");
-    }*/
+        sendmsg(m_sockets[threadid], message_header, 0);
+        /* This throws an error, but the packets are successfully sent ?!
+        if (ret < 0) {
+            perror("sendmsg()");
+        }*/
+    }
 }

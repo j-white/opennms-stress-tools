@@ -106,7 +106,7 @@ void UDPGenerator::runWithRateLimit(int threadid) {
     while(!m_stopped) {
         m_limiter.get()->aquire(m_num_packets_per_send);
         unsigned long long seq = m_sequence_counter.fetch_add(m_num_packets_per_send);
-        sendPackets(threadid, seq);
+        sendPackets(threadid, m_num_packets_per_send, seq - m_num_packets_per_send);
         if (seq % m_report_every_n_packets == 0) {
             now = time(0);
             strftime(date_buff, DATE_BUFF_SIZE, "%Y-%m-%d %H:%M:%S.000", localtime(&now));
@@ -122,7 +122,7 @@ void UDPGenerator::runWithoutRateLimit(int threadid) {
 
     while(!m_stopped) {
         unsigned long long seq = m_sequence_counter.fetch_add(m_num_packets_per_send);
-        sendPackets(threadid, seq);
+        sendPackets(threadid, m_num_packets_per_send, seq - m_num_packets_per_send);
         if (seq % m_report_every_n_packets == 0) {
             now = time(0);
             strftime(date_buff, DATE_BUFF_SIZE, "%Y-%m-%d %H:%M:%S.000", localtime(&now));

@@ -37,7 +37,7 @@ public:
     void runWithoutRateLimit(int threadid);
 
     virtual const char* getPacketDescription() = 0;
-    virtual void sendPackets(int threadid, unsigned long long seq) = 0;
+    virtual void sendPackets(int threadid, unsigned int num_packets, unsigned long long first_seq) = 0;
 
     int resolvehelper(const char *hostname, int family, const char *service, sockaddr_storage *pAddr);
 
