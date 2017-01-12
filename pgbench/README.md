@@ -12,7 +12,7 @@
 
 ## Database schema
 
-The database schema in `init-opennms.sql` was dump for a Horizon 19.0.0-SNAPSHOT installatio using the following command:
+The database schema in `init-opennms.sql` was dumped from Horizon 19.0.0-SNAPSHOT installation using the following command:
 
 ```sh
 pg_dump -U opennms -C opennms
