@@ -1,4 +1,4 @@
-package org.opennms.udplistener.camelnetty41;
+package org.opennms.udplistener.camelnetty40;
 
 import java.net.InetSocketAddress;
 
@@ -19,11 +19,11 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
 
-public class Netty41Listener extends AbstractUDPListener {
+public class Netty40Listener extends AbstractUDPListener {
 
     @Override
     public String getShortName() {
-        return "netty41";
+        return "netty40";
     }
 
     private class DataServerHandler extends ChannelInboundHandlerAdapter {

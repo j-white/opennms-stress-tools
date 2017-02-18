@@ -1,0 +1,2 @@
+org.opennms.udplistener.camelnetty40.CamelNetty40Listener
+org.opennms.udplistener.camelnetty40.Netty40Listener

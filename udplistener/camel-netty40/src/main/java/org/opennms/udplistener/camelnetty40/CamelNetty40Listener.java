@@ -1,4 +1,4 @@
-package org.opennms.udplistener.camelnetty41;
+package org.opennms.udplistener.camelnetty40;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -20,9 +20,9 @@ import org.slf4j.LoggerFactory;
 
 import io.netty.buffer.ByteBuf;
 
-public class CamelNetty41Listener extends AbstractUDPListener {
+public class CamelNetty40Listener extends AbstractUDPListener {
 
-    private static final Logger LOG = LoggerFactory.getLogger(CamelNetty41Listener.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CamelNetty40Listener.class);
 
     private static final int SOCKET_TIMEOUT = 500;
 
@@ -30,7 +30,7 @@ public class CamelNetty41Listener extends AbstractUDPListener {
 
     @Override
     public String getShortName() {
-        return "camel-netty41";
+        return "camel-netty40";
     }
 
     @Override
