@@ -15,4 +15,8 @@ The tool provided in the `jdbc-events` directory will help establish a baseline 
 The tool provided in the `udpgen` directory will generate a stream of either Syslog or SNMPv2 Trap messages via UDP.
 
 These can be sent directly to OpenNMS, or to a Minion to test the performance of the full stack.
-  
+
+## udplistener
+
+A series of fat .jars used to evaluate the rate at which different strategies can handle processing UDP packets.
+
