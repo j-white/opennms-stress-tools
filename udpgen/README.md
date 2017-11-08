@@ -42,5 +42,5 @@ taskset -c 0 ./udpgen -r 0
 Generate 200000 SNMPv2 traps per second over 8 threads, targeted at 127.0.0.1:1162.
 
 ```sh
-./udpgen -x -r 200000 -t 8
+./udpgen -x snmp -r 200000 -t 8
 ```

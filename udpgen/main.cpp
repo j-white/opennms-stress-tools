@@ -1,12 +1,11 @@
 #include <iostream>
-#include <cstdlib>
 #include <thread>
 #include <atomic>
 #include <cstring>
-#include <sys/socket.h>
 
 #include "syslog_generator.hpp"
 #include "trap_generator.hpp"
+#include "netflow5_generator.hpp"
 
 void daemonize();
 
@@ -16,13 +15,13 @@ int main(int argc, char **argv) {
     memset(host, 0, HOST_LEN);
     int port = -1;
     int rate = -1;
-    char traps = 0;
     char daemon = 0;
     int num_threads = -1;
     unsigned int num_packets_per_send = 0;
+    enum payloads {SNMP, SYSLOG, NETFLOW5} payload = SYSLOG;
 
     int c;
-    while ((c = getopt (argc, argv, "dh:p:r:t:xz:")) != -1) {
+    while ((c = getopt(argc, argv, "dh:p:r:t:x:z:")) != -1) {
         switch (c) {
             case 'd':
                 daemon = 1;
@@ -40,14 +39,23 @@ int main(int argc, char **argv) {
                 num_threads = atoi(optarg);
                 break;
             case 'x':
-                traps = 1;
+                if (strcmp(optarg, "snmp") == 0) {
+                    payload = SNMP;
+                } else if (strcmp(optarg, "syslog") == 0) {
+                    payload = SYSLOG;
+                } else if (strcmp(optarg, "netflow5") == 0) {
+                    payload = NETFLOW5;
+                } else {
+                    printf("Invalid payload type: %s\n", optarg);
+                    return 1;
+                }
                 break;
             case 'z':
                 num_packets_per_send = atoi(optarg);
                 break;
             default:
-                printf("\nUsage: udpgen [-x] [-d] [-h host] [-p port] [-r rate] [-t threads] [-z packets]\n\n");
-                printf("  -x: Generate SNMP Traps instead of Syslog Messages\n");
+                printf("\nUsage: udpgen [-d] [-h host] [-p port] [-r rate] [-t threads] [-z packets] [-x type]\n\n");
+                printf("  -x: Type of payload: snmp, syslog, or netflow5 (default: syslog)\n");
                 printf("  -d: Daemonize (default: false)\n");
                 printf("  -h: Target host / IP address (default: 127.0.0.1)\n");
                 printf("  -p: Target port (default: depends on mode)\n");
@@ -65,10 +73,10 @@ int main(int argc, char **argv) {
     }
 
     std::unique_ptr<UDPGenerator> generator;
-    if (traps) {
-        generator = std::unique_ptr<UDPGenerator>(new TrapGenerator());
-    } else {
-        generator = std::unique_ptr<UDPGenerator>(new SyslogGenerator());
+    switch (payload) {
+        case SNMP: generator = std::unique_ptr<UDPGenerator>(new TrapGenerator()); break;
+        case SYSLOG: generator = std::unique_ptr<UDPGenerator>(new SyslogGenerator()); break;
+        case NETFLOW5: generator = std::unique_ptr<UDPGenerator>(new Netflow5Generator()); break;
     }
 
     if (strlen(host) > 0) {
