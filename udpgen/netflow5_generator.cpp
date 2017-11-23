@@ -58,6 +58,7 @@ void Netflow5Generator::sendPackets(int threadid, unsigned int num_packets, unsi
     struct NF5_HEADER *hdr = nullptr;
     struct NF5_FLOW *flw = nullptr;
     int offset;
+    int num_flows = 30;
 
     gettimeofday(&now, NULL);
 
@@ -65,28 +66,31 @@ void Netflow5Generator::sendPackets(int threadid, unsigned int num_packets, unsi
     hdr = (struct NF5_HEADER *)packet;
 
     hdr->version = htons(5);
-    hdr->flows = htons(1);
+    hdr->flows = htons(num_flows);
     hdr->uptime_ms = htonl(first_seq);
     hdr->time_sec = htonl(now.tv_sec);
     hdr->time_nanosec = htonl(now.tv_usec * 1000);
     hdr->flow_sequence = htonl(first_seq);
 
     offset = sizeof(*hdr);
-    flw = (struct NF5_FLOW *)(packet + offset);
 
-    flw->if_index_in = flw->if_index_out = htons(1);
-    flw->src_ip = 1;
-    flw->dest_ip = 1;
-    flw->src_port = htons(1);
-    flw->dest_port = htons(1);
-    flw->flow_packets = htonl(1);
-    flw->flow_octets = htonl(1);
-    flw->flow_start = htonl(0);
-    flw->flow_finish = htonl(1);
-    flw->tcp_flags = 0;
-    flw->protocol = 0;
-    flw->tos = 0;
-    offset += sizeof(*flw);
+    for (uint32_t i = 0; i < num_flows; i++) {
+        flw = (struct NF5_FLOW *)(packet + offset);
+
+        flw->if_index_in = flw->if_index_out = htons(i);
+        flw->src_ip = i;
+        flw->dest_ip = i + 1;
+        flw->src_port = htons(1);
+        flw->dest_port = htons(1);
+        flw->flow_packets = htonl(1);
+        flw->flow_octets = htonl(1);
+        flw->flow_start = htonl(0);
+        flw->flow_finish = htonl(1);
+        flw->tcp_flags = 0;
+        flw->protocol = 0;
+        flw->tos = 0;
+        offset += sizeof(*flw);
+    }
 
     send(m_sockets[threadid], packet, (size_t)offset, 0);
 }
