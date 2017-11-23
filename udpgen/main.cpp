@@ -16,15 +16,19 @@ int main(int argc, char **argv) {
     int port = -1;
     int rate = -1;
     char daemon = 0;
+    char interactive = 1;
     int num_threads = -1;
     unsigned int num_packets_per_send = 0;
     enum payloads {SNMP, SYSLOG, NETFLOW5} payload = SYSLOG;
 
     int c;
-    while ((c = getopt(argc, argv, "dh:p:r:t:x:z:")) != -1) {
+    while ((c = getopt(argc, argv, "dih:p:r:t:x:z:")) != -1) {
         switch (c) {
             case 'd':
                 daemon = 1;
+                break;
+            case 'i':
+                interactive = 0;
                 break;
             case 'h':
                 strncpy(host, optarg, HOST_LEN);
@@ -54,9 +58,10 @@ int main(int argc, char **argv) {
                 num_packets_per_send = atoi(optarg);
                 break;
             default:
-                printf("\nUsage: udpgen [-d] [-h host] [-p port] [-r rate] [-t threads] [-z packets] [-x type]\n\n");
+                printf("\nUsage: udpgen [-d] [-i] [-h host] [-p port] [-r rate] [-t threads] [-z packets] [-x type]\n\n");
                 printf("  -x: Type of payload: snmp, syslog, or netflow5 (default: syslog)\n");
                 printf("  -d: Daemonize (default: false)\n");
+                printf("  -i: Disable interactivity (default: false)\n");
                 printf("  -h: Target host / IP address (default: 127.0.0.1)\n");
                 printf("  -p: Target port (default: depends on mode)\n");
                 printf("  -r: Rate - number of packets per second to generate (default: 10000)\n");
@@ -113,9 +118,13 @@ int main(int argc, char **argv) {
     }
 
     generator->start();
-    char waitForKey;
-    std::cout << "Type q + enter to exit..." << std::endl;
-    std::cin >> waitForKey;
+    if (interactive) {
+        char waitForKey;
+        std::cout << "Type q + enter to exit..." << std::endl;
+        std::cin >> waitForKey;
+    } else {
+        pause();
+    }
     generator->stop();
     return 0;
 }
