@@ -32,6 +32,10 @@ int Netflow5Generator::start() {
         }
     }
 
+    std::random_device rd;  //Will be used to obtain a seed for the random number engine
+    m_random_gen = std::mt19937(rd()); //Standard mersenne_twister_engine seeded with rd()
+    m_random_dis = std::uniform_int_distribution<uint32_t>();
+
     return UDPGenerator::start();
 }
 
@@ -78,8 +82,8 @@ void Netflow5Generator::sendPackets(int threadid, unsigned int num_packets, unsi
         flw = (struct NF5_FLOW *)(packet + offset);
 
         flw->if_index_in = flw->if_index_out = htons(i);
-        flw->src_ip = i;
-        flw->dest_ip = i + 1;
+        flw->src_ip = m_random_dis(m_random_gen);
+        flw->dest_ip = m_random_dis(m_random_gen);
         flw->src_port = htons(1);
         flw->dest_port = htons(1);
         flw->flow_packets = htonl(1);
