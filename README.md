@@ -12,9 +12,7 @@ The tool provided in the `jdbc-events` directory will help establish a baseline 
 
 ## udpgen
 
-The tool provided in the `udpgen` directory will generate a stream of Syslog, SNMPv2 Traps or Netflow 5 messages via UDP.
-
-These can be sent directly to OpenNMS, or to a Minion to test the performance of the full stack.
+Moved to https://github.com/OpenNMS/udpgen
 
 ## udplistener
 
